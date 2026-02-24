@@ -21,6 +21,57 @@ except Exception:
     except Exception:
         _VALIDATION_CLS = None
 
+import os
+import sys
+import platform
+
+def enable_windows_ansi():
+    """
+    Enable ANSI color support on Windows (PowerShell, cmd.exe).
+    Works on Windows 10+ without Windows Terminal.
+    Returns True if successful or not needed, False otherwise.
+    """
+    if platform.system() != 'Windows':
+        # Not Windows, ANSI probably already works
+        return True
+    
+    try:
+        import ctypes
+        from ctypes import wintypes
+        
+        # Get handle to stdout
+        kernel32 = ctypes.windll.kernel32
+        STD_OUTPUT_HANDLE = -11
+        stdout_handle = kernel32.GetStdHandle(STD_OUTPUT_HANDLE)
+        
+        if stdout_handle == -1:
+            return False
+        
+        # Get current console mode
+        mode = wintypes.DWORD()
+        if not kernel32.GetConsoleMode(stdout_handle, ctypes.byref(mode)):
+            return False
+        
+        # Enable VIRTUAL_TERMINAL_PROCESSING (0x0004)
+        ENABLE_VIRTUAL_TERMINAL_PROCESSING = 0x0004
+        new_mode = mode.value | ENABLE_VIRTUAL_TERMINAL_PROCESSING
+        
+        # Set the new console mode
+        if not kernel32.SetConsoleMode(stdout_handle, new_mode):
+            return False
+            
+        return True
+        
+    except Exception as e:
+        # If anything fails, just return False (colors won't work but script will run)
+        return False
+
+# Enable ANSI colors on Windows
+if not enable_windows_ansi():
+    # Optional: Print a warning that colors won't work
+    print("[!] ANSI colors not supported on this terminal. Upgrade to Windows 10+ or use Windows Terminal.", file=sys.stderr)
+
+
 ##################################################
 
 PAC_VERBOSE = False
@@ -2092,3 +2143,4 @@ def main():
 
 if __name__ == "__main__":
     main()
+           
